@@ -10,22 +10,28 @@ Teams scatter secrets across GitHub Secrets, `.env` files, and CI configs. Here,
 
 ```
   GitHub Actions runner                         1Claw vault (HSM-backed)
-  ┌───────────────────────┐                     ┌────────────────────────┐
-  │ secrets.ONECLAW_AGENT  │ ── api key ───────▶ │  examples/hello         │
-  │   _API_KEY (bootstrap) │   (exchanged for a  │  (deploy credential)    │
-  │                        │    900s JWT)        │                         │
-  │ 1clawAI/1claw-action   │ ◀── DEPLOY_KEY ──── │  value never leaves     │
-  │   → $DEPLOY_KEY (masked)│                     │  until requested        │
-  │ ./deploy.sh  ──────────┼──► uses it, logs 🔒  └────────────────────────┘
-  └───────────────────────┘
+  ┌────────────────────────┐                    ┌────────────────────────┐
+  │ secrets.ONECLAW_AGENT   │ ── api key ──────▶ │  examples/hello         │
+  │   _API_KEY (bootstrap)  │  (exchanged for a  │  (deploy credential)    │
+  │                         │   900s JWT)        │                         │
+  │ ci/fetch-secret.mjs ────┼◀── DEPLOY_KEY ──── │  value never leaves     │
+  │   (@1claw/sdk)          │                    │  until requested        │
+  │   → $DEPLOY_KEY (masked) │                    └────────────────────────┘
+  │ ./deploy.sh ────────────┼──► uses it, logs 🔒
+  └────────────────────────┘
 ```
 
 ## Where 1Claw comes in
 
 - **The deploy key is NOT in the repo and NOT in GitHub Secrets** — it's stored in the vault, encrypted with HSM-held keys, addressed by path (`examples/hello`).
-- The workflow's [`1clawAI/1claw-action@v1`](https://github.com/1clawAI/1claw-action) step exchanges the bootstrap agent key for a short-lived JWT and fetches the deploy key **only during the run**.
+- The workflow's [`ci/fetch-secret.mjs`](ci/fetch-secret.mjs) step uses `@1claw/sdk` to exchange the bootstrap agent key for a short-lived JWT and fetch the deploy key **only during the run**.
 - The value is **masked** in logs (`::add-mask::`) and injected as `$DEPLOY_KEY` for `deploy.sh`. It is never written to disk or committed.
-- The action is **deny-by-default**: it fetches only the paths listed in the workflow and fails closed on any policy denial.
+- It fetches **only** the single path the workflow names — nothing else.
+
+> **Why the SDK and not the official `1clawAI/1claw-action`?** That action's published
+> `action.yml` currently fails to load (it embeds a `${{ secrets.* }}` expression in an
+> input description, which GitHub rejects at load time). Fetching via the SDK keeps the
+> pipeline self-contained and reliable while achieving the same result.
 
 ## What's in GitHub Secrets
 
@@ -57,10 +63,11 @@ The workflow references only `${{ secrets.ONECLAW_AGENT_API_KEY }}` — a pointe
 2. **Add the bootstrap key to GitHub Secrets:** repo → *Settings → Secrets and variables → Actions → New repository secret*
    - Name: `ONECLAW_AGENT_API_KEY`
    - Value: your `ocv_…` agent key
-3. **Point the workflow at your secret** — edit the mapping in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
+3. **Point the workflow at your secret** — edit the `env:` block in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
    ```yaml
-   secrets: |
-     DEPLOY_KEY=<your-vault-id-or-name>/<secret-path>
+   env:
+     ONECLAW_VAULT_ID: <your-vault-id>
+     DEMO_SECRET_PATH: <your-secret-path>   # e.g. ci/deploy-key
    ```
 4. **Push to `main`** (or run it from the *Actions* tab). Watch the run pull the secret and deploy — with `DEPLOY_KEY` masked in every log line.
 

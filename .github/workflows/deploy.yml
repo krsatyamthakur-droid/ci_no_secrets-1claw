@@ -1,17 +1,17 @@
 name: deploy
 
 # A CI pipeline that holds NO real secrets. The deploy credential lives in a
-# 1Claw vault and is pulled at runtime. GitHub Secrets holds only one thing:
-# ONECLAW_AGENT_API_KEY — a low-privilege bootstrap key that can do nothing but
-# fetch the vault secrets this workflow is allowed to read.
+# 1Claw vault and is pulled at runtime via the 1Claw SDK. GitHub Secrets holds
+# only ONECLAW_AGENT_API_KEY — a low-privilege bootstrap key that can do nothing
+# but read the vault secrets this agent is scoped to.
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: {} # lets you run it manually from the Actions tab
+  workflow_dispatch: {} # run it manually from the Actions tab
 
 permissions:
-  contents: read # no id-token needed; auth is the scoped 1Claw agent key
+  contents: read
 
 jobs:
   deploy:
@@ -19,16 +19,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Load secrets from 1Claw vault
-        id: vault
-        uses: 1clawAI/1claw-action@v1
+      - uses: actions/setup-node@v4
         with:
-          api-key: ${{ secrets.ONECLAW_AGENT_API_KEY }}
-          mask: "true"
-          # ENV_NAME=<vault-id-or-name>/<secret-path>
-          secrets: |
-            DEPLOY_KEY=7d6d3a2f-875e-47cd-8915-3c24709492db/examples/hello
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Load secret from 1Claw vault
+        env:
+          ONECLAW_AGENT_API_KEY: ${{ secrets.ONECLAW_AGENT_API_KEY }}
+          ONECLAW_VAULT_ID: 7d6d3a2f-875e-47cd-8915-3c24709492db
+          DEMO_SECRET_PATH: examples/hello
+        run: node ci/fetch-secret.mjs
 
       - name: Deploy using the vault secret
         run: ./deploy.sh
-        # DEPLOY_KEY is injected into the env by the step above and masked in logs.
+        # DEPLOY_KEY was injected into the env by the step above and is masked in logs.
