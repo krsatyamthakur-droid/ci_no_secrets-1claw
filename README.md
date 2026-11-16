@@ -73,7 +73,7 @@ The workflow references only `${{ secrets.ONECLAW_AGENT_API_KEY }}` — a pointe
 
 ## Bonus: the same vault, used from a local agent
 
-[`agent.js`](agent.js) is a small Node agent that reads the same vault secret at runtime via `@1claw/sdk`, signs a request with it (HMAC — the secret never leaves the process), and does a mock deploy. Run it locally:
+[`agent.js`](agent.js) is a small Node agent that reads the same vault secret at runtime via `@1claw/sdk`, signs a request with it (HMAC  the secret never leaves the process), and does a mock deploy. Run it locally:
 
 ```bash
 npm install
@@ -83,7 +83,7 @@ npm start
 
 ## Free-tier footprint
 
-1 vault, 1 secret, 1 agent — well within the free tier.
+1 vault, 1 secret, 1 agent  well within the free tier.
 
 ## License
 
