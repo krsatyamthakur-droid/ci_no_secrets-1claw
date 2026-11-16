@@ -1,0 +1,17 @@
+# Secrets never belong in the repo — this is the whole point of the project.
+.env
+.env.*
+!.env.example
+
+# 1Claw local/daemon artifacts
+.1claw/
+*.1claw
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

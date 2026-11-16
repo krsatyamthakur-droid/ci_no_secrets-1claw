@@ -1,0 +1,16 @@
+{
+  "name": "1claw-no-secrets-agent",
+  "version": "1.0.0",
+  "description": "A small AI agent that pulls a secret from a 1Claw vault at runtime. No key in code, no key in context.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node agent.js"
+  },
+  "dependencies": {
+    "@1claw/sdk": "^0.63.4"
+  },
+  "license": "MIT"
+}
